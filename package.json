@@ -2,11 +2,11 @@
 	"name": "webhook-driven-pipeline",
 	"version": "1.0.0",
 	"description": "A webhook-driven task processing pipeline.",
-	"main": "dist/index.js",
+	"main": "dist/api/index.js",
 	"scripts": {
 		"build": "tsc",
-		"start": "node dist/index.js",
-		"dev": "tsc -w & nodemon dist/index.js",
+		"start": "node dist/api/index.js",
+		"dev": "tsx watch src/api/index.ts",
 		"lint": "eslint . --ext .ts",
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
@@ -17,7 +17,7 @@
 	"keywords": [],
 	"author": "",
 	"license": "ISC",
-	"type": "commonjs",
+	"type": "module",
 	"bugs": {
 		"url": "https://github.com/Mohamad-Salha/webhook-driven-pipeline/issues"
 	},
@@ -28,8 +28,16 @@
 		"@types/pg": "^8.20.0",
 		"@typescript-eslint/eslint-plugin": "^8.57.1",
 		"@typescript-eslint/parser": "^8.57.1",
+		"concurrently": "^9.2.1",
 		"eslint": "^10.1.0",
 		"nodemon": "^3.1.14",
+		"ts-node": "^10.9.2",
+		"tsx": "^4.21.0",
 		"typescript": "^5.9.3"
+	},
+	"dependencies": {
+		"dotenv": "^17.3.1",
+		"express": "^5.2.1",
+		"pg": "^8.20.0"
 	}
 }
