@@ -1,0 +1,14 @@
+PLAN.md
+.github/
+
+# Dependencies
+node_modules
+
+# Build output
+dist
+
+# Log files
+*.log
+
+# Environment variables
+.env
