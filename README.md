@@ -141,7 +141,16 @@ Create .env with:
 DATABASE_URL=postgresql://pipeline_user:pipeline_password@localhost:5432/pipeline_db
 PORT=3000
 WORKER_POLL_INTERVAL_MS=1500
+RATE_LIMIT_PIPELINES_PER_MINUTE=20
+RATE_LIMIT_WEBHOOKS_PER_MINUTE=120
+WEBHOOK_SIGNING_SECRET=
 ```
+
+If WEBHOOK_SIGNING_SECRET is set, webhook requests must include a valid HMAC signature in header x-webhook-signature with this format:
+
+sha256=<hex_digest>
+
+Digest is computed over the raw JSON body using SHA-256 HMAC.
 
 ### 3) Install and migrate
 
@@ -207,6 +216,34 @@ On:
 - Delivery retries are implemented in worker with capped attempts and linear backoff.
 - Action execution is isolated in a dedicated service to keep worker logic clean.
 - API remains responsive by enqueueing and returning 202 immediately for webhook ingestion.
+
+## Optional Phase Implemented
+
+The optional phase was implemented with two focused hardening features:
+
+- Rate limiting: protects API from burst abuse and accidental overload.
+- Webhook signature verification: validates webhook authenticity when a secret is configured.
+
+Where applied:
+
+- POST /pipelines uses a write limiter.
+- POST /webhook/:pipelineId and POST /webhook/source/:sourcePath use ingress limiter and signature verification.
+
+Quick signature example (Node.js):
+
+```js
+import crypto from 'crypto';
+
+const secret = process.env.WEBHOOK_SIGNING_SECRET;
+const rawBody = JSON.stringify({ message: 'hello world' });
+
+const signature = crypto
+	.createHmac('sha256', secret)
+	.update(rawBody)
+	.digest('hex');
+
+console.log(`sha256=${signature}`);
+```
 
 ## Trade-offs and Next Improvements
 

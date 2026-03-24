@@ -1,4 +1,6 @@
+import crypto from 'crypto';
 import express, { Request, Response } from 'express';
+import rateLimit from 'express-rate-limit';
 
 import { listDeliveriesByJobId } from '../services/delivery.service.js';
 import { getJobById, listJobs, enqueueJob } from '../services/job.service.js';
@@ -6,8 +8,31 @@ import { createPipeline, deletePipeline, getPipelineById, getPipelineBySourcePat
 
 const app = express();
 const port = process.env.PORT || 3000;
+const webhookSigningSecret = process.env.WEBHOOK_SIGNING_SECRET;
 
-app.use(express.json());
+const pipelineWriteLimiter = rateLimit({
+	windowMs: 60 * 1000,
+	max: Number(process.env.RATE_LIMIT_PIPELINES_PER_MINUTE ?? 20),
+	standardHeaders: true,
+	legacyHeaders: false,
+	message: { error: 'too many pipeline write requests, try again in a minute' },
+});
+
+const webhookIngressLimiter = rateLimit({
+	windowMs: 60 * 1000,
+	max: Number(process.env.RATE_LIMIT_WEBHOOKS_PER_MINUTE ?? 120),
+	standardHeaders: true,
+	legacyHeaders: false,
+	message: { error: 'too many webhook requests, try again in a minute' },
+});
+
+app.use(
+	express.json({
+		verify: (req, _res, buf) => {
+			(req as Request & { rawBody?: string }).rawBody = buf.toString('utf8');
+		},
+	}),
+);
 
 type CreatePipelineRequest = {
 	name?: unknown;
@@ -18,6 +43,34 @@ type CreatePipelineRequest = {
 
 function sendError(res: Response, status: number, message: string): void {
 	res.status(status).json({ error: message });
+}
+
+function verifyWebhookSignature(req: Request, res: Response): boolean {
+	if (!webhookSigningSecret) {
+		return true;
+	}
+
+	const signatureHeader = req.header('x-webhook-signature');
+	if (!signatureHeader) {
+		sendError(res, 401, 'missing x-webhook-signature header');
+		return false;
+	}
+
+	const rawBody = (req as Request & { rawBody?: string }).rawBody ?? '';
+	const expected = crypto
+		.createHmac('sha256', webhookSigningSecret)
+		.update(rawBody)
+		.digest('hex');
+
+	const provided = signatureHeader.replace('sha256=', '').trim();
+	const isValid = provided.length === expected.length && crypto.timingSafeEqual(Buffer.from(provided), Buffer.from(expected));
+
+	if (!isValid) {
+		sendError(res, 401, 'invalid webhook signature');
+		return false;
+	}
+
+	return true;
 }
 
 function normalizeSourcePath(name: string): string {
@@ -82,7 +135,7 @@ app.get('/', (_req: Request, res: Response) => {
 	res.status(200).send('OK');
 });
 
-app.post('/pipelines', async (req: Request, res: Response) => {
+app.post('/pipelines', pipelineWriteLimiter, async (req: Request, res: Response) => {
 	const parsed = validateCreatePipelineBody(req.body as CreatePipelineRequest);
 
 	if (!parsed.ok) {
@@ -169,7 +222,11 @@ app.delete('/pipelines/:id', async (req: Request, res: Response) => {
 	}
 });
 
-app.post('/webhook/:pipelineId', async (req: Request, res: Response) => {
+app.post('/webhook/:pipelineId', webhookIngressLimiter, async (req: Request, res: Response) => {
+	if (!verifyWebhookSignature(req, res)) {
+		return;
+	}
+
 	const pipelineId = Number(req.params.pipelineId);
 
 	if (!Number.isInteger(pipelineId) || pipelineId < 1) {
@@ -206,7 +263,11 @@ app.post('/webhook/:pipelineId', async (req: Request, res: Response) => {
 	}
 });
 
-app.post('/webhook/source/:sourcePath', async (req: Request, res: Response) => {
+app.post('/webhook/source/:sourcePath', webhookIngressLimiter, async (req: Request, res: Response) => {
+	if (!verifyWebhookSignature(req, res)) {
+		return;
+	}
+
 	const sourcePathParam = req.params.sourcePath;
 	const sourcePath = Array.isArray(sourcePathParam) ? sourcePathParam[0] : sourcePathParam;
 
