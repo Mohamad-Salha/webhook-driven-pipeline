@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express';
 
+import { listDeliveriesByJobId } from '../services/delivery.service.js';
 import { getJobById, listJobs, enqueueJob } from '../services/job.service.js';
 import { createPipeline, deletePipeline, getPipelineById, getPipelineBySourcePath, listPipelines } from '../services/pipeline.service.js';
 
@@ -233,6 +234,28 @@ app.get('/jobs/:id', async (req: Request, res: Response) => {
 	} catch (error) {
 		console.error(error);
 		sendError(res, 500, 'failed to fetch job');
+	}
+});
+
+app.get('/jobs/:id/deliveries', async (req: Request, res: Response) => {
+	const id = Number(req.params.id);
+	if (!Number.isInteger(id) || id < 1) {
+		sendError(res, 400, 'id must be a positive integer');
+		return;
+	}
+
+	try {
+		const job = await getJobById(id);
+		if (!job) {
+			sendError(res, 404, 'job not found');
+			return;
+		}
+
+		const deliveryRows = await listDeliveriesByJobId(id);
+		res.status(200).json(deliveryRows);
+	} catch (error) {
+		console.error(error);
+		sendError(res, 500, 'failed to fetch deliveries');
 	}
 });
 

@@ -114,3 +114,21 @@ export async function getPipelineBySourcePath(sourcePath: string): Promise<Pipel
 		subscribers: subscriberRows,
 	};
 }
+
+export async function getPipelineByIdWithSubscribers(id: number): Promise<PipelineWithSubscribers | null> {
+	const [pipeline] = await db.select().from(pipelines).where(eq(pipelines.id, id)).limit(1);
+
+	if (!pipeline) {
+		return null;
+	}
+
+	const subscriberRows = await db
+		.select()
+		.from(subscribers)
+		.where(eq(subscribers.pipelineId, pipeline.id));
+
+	return {
+		...pipeline,
+		subscribers: subscriberRows,
+	};
+}
