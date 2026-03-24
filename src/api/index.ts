@@ -108,7 +108,8 @@ app.post('/pipelines', async (req: Request, res: Response) => {
 
 		res.status(201).json({
 			...created,
-			webhookUrl: `/webhook/${sourcePath}`,
+			webhookUrl: `/webhook/source/${sourcePath}`,
+			webhookByIdUrl: `/webhook/${created.id}`,
 		});
 	} catch (error) {
 		console.error(error);
@@ -168,7 +169,44 @@ app.delete('/pipelines/:id', async (req: Request, res: Response) => {
 	}
 });
 
-app.post('/webhook/:sourcePath', async (req: Request, res: Response) => {
+app.post('/webhook/:pipelineId', async (req: Request, res: Response) => {
+	const pipelineId = Number(req.params.pipelineId);
+
+	if (!Number.isInteger(pipelineId) || pipelineId < 1) {
+		sendError(res, 400, 'pipelineId must be a positive integer');
+		return;
+	}
+
+	if (typeof req.body !== 'object' || req.body === null || Array.isArray(req.body)) {
+		sendError(res, 400, 'webhook payload must be a JSON object');
+		return;
+	}
+
+	try {
+		const pipeline = await getPipelineById(pipelineId);
+		if (!pipeline || !pipeline.isActive) {
+			sendError(res, 404, 'pipeline not found or inactive');
+			return;
+		}
+
+		const job = await enqueueJob({
+			pipelineId,
+			payload: req.body as Record<string, unknown>,
+		});
+
+		res.status(202).json({
+			message: 'webhook accepted',
+			jobId: job.id,
+			status: job.status,
+			pipelineId,
+		});
+	} catch (error) {
+		console.error(error);
+		sendError(res, 500, 'failed to accept webhook');
+	}
+});
+
+app.post('/webhook/source/:sourcePath', async (req: Request, res: Response) => {
 	const sourcePathParam = req.params.sourcePath;
 	const sourcePath = Array.isArray(sourcePathParam) ? sourcePathParam[0] : sourcePathParam;
 

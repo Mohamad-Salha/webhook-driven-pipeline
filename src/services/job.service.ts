@@ -1,4 +1,4 @@
-import { desc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq } from 'drizzle-orm';
 
 import { db } from '../db/client.js';
 import { jobs } from '../db/schema.js';
@@ -31,7 +31,7 @@ export async function getJobById(id: number): Promise<Job | null> {
 }
 
 export async function getNextPendingJob(): Promise<Job | null> {
-	const [job] = await db.select().from(jobs).where(eq(jobs.status, 'pending')).orderBy(desc(jobs.createdAt)).limit(1);
+	const [job] = await db.select().from(jobs).where(eq(jobs.status, 'pending')).orderBy(asc(jobs.createdAt)).limit(1);
 
 	if (!job) {
 		return null;
@@ -44,7 +44,7 @@ export async function getNextPendingJob(): Promise<Job | null> {
 			attempts: job.attempts + 1,
 			updatedAt: new Date(),
 		})
-		.where(eq(jobs.id, job.id))
+		.where(and(eq(jobs.id, job.id), eq(jobs.status, 'pending')))
 		.returning();
 
 	return claimed ?? null;
