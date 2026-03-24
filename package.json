@@ -7,8 +7,12 @@
 		"build": "tsc",
 		"start": "node dist/api/index.js",
 		"dev": "tsx watch src/api/index.ts",
-		"lint": "eslint . --ext .ts",
-		"test": "echo \"Error: no test specified\" && exit 1"
+		"lint": "eslint .",
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"db:generate": "drizzle-kit generate",
+		"db:migrate": "drizzle-kit migrate",
+		"generate": "drizzle-kit generate",
+		"migrate": "drizzle-kit migrate"
 	},
 	"repository": {
 		"type": "git",
@@ -29,6 +33,7 @@
 		"@typescript-eslint/eslint-plugin": "^8.57.1",
 		"@typescript-eslint/parser": "^8.57.1",
 		"concurrently": "^9.2.1",
+		"drizzle-kit": "^0.31.10",
 		"eslint": "^10.1.0",
 		"nodemon": "^3.1.14",
 		"ts-node": "^10.9.2",
@@ -37,6 +42,7 @@
 	},
 	"dependencies": {
 		"dotenv": "^17.3.1",
+		"drizzle-orm": "^0.45.1",
 		"express": "^5.2.1",
 		"pg": "^8.20.0"
 	}
