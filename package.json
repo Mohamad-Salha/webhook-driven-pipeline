@@ -12,8 +12,6 @@
 		"dev:all": "concurrently \"npm:dev\" \"npm:dev:worker\"",
 		"lint": "eslint .",
 		"test": "echo \"Error: no test specified\" && exit 1",
-		"db:generate": "drizzle-kit generate",
-		"db:migrate": "drizzle-kit migrate",
 		"generate": "drizzle-kit generate",
 		"migrate": "drizzle-kit migrate"
 	},
@@ -31,6 +29,7 @@
 	"homepage": "https://github.com/Mohamad-Salha/webhook-driven-pipeline#readme",
 	"devDependencies": {
 		"@types/express": "^5.0.6",
+		"@types/jsonwebtoken": "^9.0.10",
 		"@types/node": "^25.5.0",
 		"@types/pg": "^8.20.0",
 		"@typescript-eslint/eslint-plugin": "^8.57.1",
@@ -48,6 +47,7 @@
 		"drizzle-orm": "^0.45.1",
 		"express": "^5.2.1",
 		"express-rate-limit": "^8.3.1",
+		"jsonwebtoken": "^9.0.3",
 		"pg": "^8.20.0"
 	}
 }

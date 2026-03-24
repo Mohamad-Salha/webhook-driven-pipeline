@@ -69,6 +69,10 @@ Base URL (local): http://localhost:3000
 - GET /pipelines/:id
 - DELETE /pipelines/:id
 
+These endpoints require JWT auth header:
+
+Authorization: Bearer <token>
+
 Example request body for POST /pipelines:
 
 ```json
@@ -112,6 +116,30 @@ Example webhook payload:
 - GET /jobs/:id
 - GET /jobs/:id/deliveries
 
+These endpoints require JWT auth header.
+
+### Auth
+
+- POST /auth/login
+
+Example request body:
+
+```json
+{
+	"username": "admin",
+	"password": "admin123"
+}
+```
+
+Example response:
+
+```json
+{
+	"accessToken": "<jwt>",
+	"tokenType": "Bearer"
+}
+```
+
 ## Delivery Contract
 
 Worker sends POST requests to subscriber URLs with this body:
@@ -144,6 +172,11 @@ WORKER_POLL_INTERVAL_MS=1500
 RATE_LIMIT_PIPELINES_PER_MINUTE=20
 RATE_LIMIT_WEBHOOKS_PER_MINUTE=120
 WEBHOOK_SIGNING_SECRET=
+RATE_LIMIT_AUTH_PER_MINUTE=20
+JWT_SECRET=change-this-jwt-secret
+JWT_EXPIRES_IN=1h
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=admin123
 ```
 
 If WEBHOOK_SIGNING_SECRET is set, webhook requests must include a valid HMAC signature in header x-webhook-signature with this format:
@@ -219,15 +252,18 @@ On:
 
 ## Optional Phase Implemented
 
-The optional phase was implemented with two focused hardening features:
+The optional phase was implemented with three focused hardening features:
 
 - Rate limiting: protects API from burst abuse and accidental overload.
 - Webhook signature verification: validates webhook authenticity when a secret is configured.
+- JWT authentication: protects pipeline/job management endpoints.
 
 Where applied:
 
 - POST /pipelines uses a write limiter.
 - POST /webhook/:pipelineId and POST /webhook/source/:sourcePath use ingress limiter and signature verification.
+- POST /auth/login uses auth limiter.
+- Pipeline and job management endpoints require Bearer JWT.
 
 Quick signature example (Node.js):
 
@@ -248,6 +284,5 @@ console.log(`sha256=${signature}`);
 ## Trade-offs and Next Improvements
 
 - Queue is polling-based (simple, reliable), not yet event-driven.
-- No authentication or signature verification yet.
 - No metrics dashboard yet.
 - Could add dead-letter handling for repeated delivery failures.
