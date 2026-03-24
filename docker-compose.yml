@@ -1,0 +1,61 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: pipeline-postgres
+    environment:
+      POSTGRES_DB: pipeline_db
+      POSTGRES_USER: pipeline_user
+      POSTGRES_PASSWORD: pipeline_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U pipeline_user -d pipeline_db" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pipeline-migrate
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://pipeline_user:pipeline_password@postgres:5432/pipeline_db
+    command: sh -c "npm run db:generate && npm run db:migrate"
+    restart: "no"
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pipeline-api
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      PORT: 3000
+      DATABASE_URL: postgresql://pipeline_user:pipeline_password@postgres:5432/pipeline_db
+    ports:
+      - "3000:3000"
+    command: npm run start
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pipeline-worker
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: postgresql://pipeline_user:pipeline_password@postgres:5432/pipeline_db
+      WORKER_POLL_INTERVAL_MS: 1500
+    command: npm run start:worker
+
+volumes:
+  postgres_data:
