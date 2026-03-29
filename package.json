@@ -12,6 +12,8 @@
 		"dev:all": "concurrently \"npm:dev\" \"npm:dev:worker\"",
 		"lint": "eslint .",
 		"test": "echo \"Error: no test specified\" && exit 1",
+		"db:generate": "drizzle-kit generate",
+		"db:migrate": "drizzle-kit migrate",
 		"generate": "drizzle-kit generate",
 		"migrate": "drizzle-kit migrate"
 	},
@@ -37,8 +39,6 @@
 		"concurrently": "^9.2.1",
 		"drizzle-kit": "^0.31.10",
 		"eslint": "^10.1.0",
-		"nodemon": "^3.1.14",
-		"ts-node": "^10.9.2",
 		"tsx": "^4.21.0",
 		"typescript": "^5.9.3"
 	},

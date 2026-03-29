@@ -1,8 +1,10 @@
+import 'dotenv/config';
+
 import { pool } from '../db/client.js';
 import { applyPipelineAction } from '../services/action.service.js';
 import { createAndSendDelivery } from '../services/delivery.service.js';
 import { getNextPendingJob, markJobCompleted, markJobFailed } from '../services/job.service.js';
-import { getPipelineByIdWithSubscribers } from '../services/pipeline.service.js';
+import { getPipelineById } from '../services/pipeline.service.js';
 
 const POLL_INTERVAL_MS = Number(process.env.WORKER_POLL_INTERVAL_MS ?? 2000);
 let keepRunning = true;
@@ -14,7 +16,7 @@ async function processOneJob(): Promise<void> {
 	}
 
 	try {
-		const pipeline = await getPipelineByIdWithSubscribers(job.pipelineId);
+		const pipeline = await getPipelineById(job.pipelineId);
 
 		if (!pipeline || !pipeline.isActive) {
 			await markJobFailed({
