@@ -3,16 +3,11 @@ import { Router } from 'express';
 import { enqueueJob } from '../../services/job.service.js';
 import { getPipelineById, getPipelineBySourcePath } from '../../services/pipeline.service.js';
 import { webhookIngressLimiter } from '../middleware/rate-limit.js';
-import { verifyWebhookSignature } from '../middleware/webhook-signature.js';
 import { isPlainObject, parsePositiveInt, sendError } from '../utils/http.js';
 
 export const webhookRouter = Router();
 
 webhookRouter.post('/webhook/:pipelineId', webhookIngressLimiter, async (req, res) => {
-	if (!verifyWebhookSignature(req, res)) {
-		return;
-	}
-
 	const pipelineId = parsePositiveInt(req.params.pipelineId);
 	if (!pipelineId) {
 		sendError(res, 400, 'pipelineId must be a positive integer');
@@ -49,10 +44,6 @@ webhookRouter.post('/webhook/:pipelineId', webhookIngressLimiter, async (req, re
 });
 
 webhookRouter.post('/webhook/source/:sourcePath', webhookIngressLimiter, async (req, res) => {
-	if (!verifyWebhookSignature(req, res)) {
-		return;
-	}
-
 	const sourcePathParam = req.params.sourcePath;
 	const sourcePath = Array.isArray(sourcePathParam) ? sourcePathParam[0] : sourcePathParam;
 
