@@ -3,15 +3,15 @@ services:
     image: postgres:16-alpine
     container_name: pipeline-postgres
     environment:
-      POSTGRES_DB: pipeline_db
-      POSTGRES_USER: pipeline_user
-      POSTGRES_PASSWORD: pipeline_password
+      POSTGRES_DB: ${POSTGRES_DB:-pipeline_db}
+      POSTGRES_USER: ${POSTGRES_USER:-pipeline_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pipeline_password}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U pipeline_user -d pipeline_db" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pipeline_user} -d ${POSTGRES_DB:-pipeline_db}" ]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -25,7 +25,7 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://pipeline_user:pipeline_password@postgres:5432/pipeline_db
+      DATABASE_URL: postgresql://${POSTGRES_USER:-pipeline_user}:${POSTGRES_PASSWORD:-pipeline_password}@postgres:5432/${POSTGRES_DB:-pipeline_db}
     command: sh -c "npm run db:generate && npm run db:migrate"
     restart: "no"
 
@@ -38,8 +38,16 @@ services:
       migrate:
         condition: service_completed_successfully
     environment:
-      PORT: 3000
-      DATABASE_URL: postgresql://pipeline_user:pipeline_password@postgres:5432/pipeline_db
+      PORT: ${PORT:-3000}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-pipeline_user}:${POSTGRES_PASSWORD:-pipeline_password}@postgres:5432/${POSTGRES_DB:-pipeline_db}
+      JWT_SECRET: ${JWT_SECRET:-change-this-jwt-secret}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1h}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+      WEBHOOK_SIGNING_SECRET: ${WEBHOOK_SIGNING_SECRET:-}
+      RATE_LIMIT_PIPELINES_PER_MINUTE: ${RATE_LIMIT_PIPELINES_PER_MINUTE:-20}
+      RATE_LIMIT_WEBHOOKS_PER_MINUTE: ${RATE_LIMIT_WEBHOOKS_PER_MINUTE:-120}
+      RATE_LIMIT_AUTH_PER_MINUTE: ${RATE_LIMIT_AUTH_PER_MINUTE:-20}
     ports:
       - "3000:3000"
     command: npm run start
@@ -53,8 +61,8 @@ services:
       migrate:
         condition: service_completed_successfully
     environment:
-      DATABASE_URL: postgresql://pipeline_user:pipeline_password@postgres:5432/pipeline_db
-      WORKER_POLL_INTERVAL_MS: 1500
+      DATABASE_URL: postgresql://${POSTGRES_USER:-pipeline_user}:${POSTGRES_PASSWORD:-pipeline_password}@postgres:5432/${POSTGRES_DB:-pipeline_db}
+      WORKER_POLL_INTERVAL_MS: ${WORKER_POLL_INTERVAL_MS:-1500}
     command: npm run start:worker
 
 volumes:
